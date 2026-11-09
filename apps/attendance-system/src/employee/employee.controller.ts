@@ -6,6 +6,7 @@ import {
   Inject,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -15,6 +16,8 @@ import {
   EMPLOYEE_PATTERNS,
   EMPLOYEE_SERVICE,
   type FindAllEmployeesPayload,
+  UpdateEmployeeDto,
+  type UpdateEmployeePayload,
 } from '@app/common';
 import { Role } from '../common/decorators/role.decorator.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
@@ -53,5 +56,17 @@ export class EmployeeController {
   @ResponseMessage('Employee retrieved')
   findEmployeeById(@Param('id', ParseIntPipe) id: number) {
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.FIND_ONE, { id });
+  }
+
+  @Patch(':id')
+  @Role('HR_ADMIN')
+  @ResponseMessage('Employee successfully updated')
+  updateEmployee(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateEmployeeDto,
+  ) {
+    const payload: UpdateEmployeePayload = { ...dto, id };
+
+    return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.UPDATE, payload);
   }
 }

@@ -8,6 +8,7 @@ import {
   Employee,
   type FindAllEmployeesPayload,
   type Paginated,
+  type UpdateEmployeePayload,
 } from '@app/common';
 
 const SALT_ROUNDS = 10;
@@ -82,5 +83,23 @@ export class EmployeeService {
 
     const { password: _password, ...result } = saved;
     return result;
+  }
+
+  async update(payload: UpdateEmployeePayload) {
+    const {
+      id,
+      password: _password,
+      ...data
+    } = payload as UpdateEmployeePayload & { password?: string };
+
+    const result = await this.employeeRepository.update(
+      { id: String(id) },
+      data,
+    );
+    if (result.affected === 0)
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Employee not found',
+      });
   }
 }

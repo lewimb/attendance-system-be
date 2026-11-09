@@ -1,3 +1,4 @@
+import { OmitType, PartialType } from '@nestjs/mapped-types';
 import {
   IsEmail,
   IsInt,
@@ -34,3 +35,9 @@ export class CreateEmployeeDto {
   @Length(1, 20)
   phone?: string;
 }
+
+export class UpdateEmployeeDto extends PartialType(
+  OmitType(CreateEmployeeDto, ['password'] as const),
+) {}
+
+export type UpdateEmployeePayload = UpdateEmployeeDto & { id: number };
