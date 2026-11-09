@@ -3,6 +3,7 @@ import {
   DefaultValuePipe,
   Get,
   Inject,
+  Param,
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
@@ -35,5 +36,12 @@ export class EmployeeController {
     };
 
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.FIND_ALL, payload);
+  }
+
+  @Get(':id')
+  @Role('HR_ADMIN')
+  @ResponseMessage('Employee retrieved')
+  findEmployeeById(@Param('id', ParseIntPipe) id: number) {
+    return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.FIND_ONE, { id });
   }
 }

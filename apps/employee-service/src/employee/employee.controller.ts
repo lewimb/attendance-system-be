@@ -11,4 +11,9 @@ export class EmployeeController {
   findAll(@Payload() payload: FindAllEmployeesPayload) {
     return this.employeeService.findAll(payload);
   }
+
+  @MessagePattern(EMPLOYEE_PATTERNS.FIND_ONE)
+  findOne(@Payload() payload: { id: number }) {
+    return this.employeeService.findOneById(payload.id);
+  }
 }

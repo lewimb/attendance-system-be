@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -26,5 +27,21 @@ export class EmployeeService {
     });
 
     return { items, total, page, limit };
+  }
+
+  async findOneById(id: number): Promise<Employee> {
+    const employee = await this.employeeRepository.findOne({
+      where: { id: String(id) },
+      relations: { role: true },
+    });
+
+    if (!employee) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Employee not found',
+      });
+    }
+
+    return employee;
   }
 }
