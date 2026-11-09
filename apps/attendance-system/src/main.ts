@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module.js';
 
@@ -10,6 +11,8 @@ async function bootstrap() {
       crossOriginResourcePolicy: { policy: 'same-site' },
     }),
   );
+
+  app.use(cookieParser());
 
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',').map((origin) =>
