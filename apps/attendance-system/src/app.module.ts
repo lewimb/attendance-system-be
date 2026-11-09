@@ -33,7 +33,11 @@ import { ConfigModule } from '@nestjs/config';
     },
     {
       provide: APP_PIPE,
-      useClass: ValidationPipe,
+
+      useValue: new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
     },
     {
       provide: APP_GUARD,
