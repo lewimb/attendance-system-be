@@ -33,5 +33,6 @@ export function sendRpc<T>(
         return throwError(() => new HttpException('Service unavailable', 502));
       }),
     ),
+    { defaultValue: undefined as T },
   );
 }
