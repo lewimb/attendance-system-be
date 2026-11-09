@@ -1,6 +1,4 @@
 import { Module, ValidationPipe } from '@nestjs/common';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
 import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { TransformInterceptor } from './common/interceptors/transform/transform.interceptor.js';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -28,9 +26,7 @@ import { ConfigModule } from '@nestjs/config';
     AuthModule,
     EmployeeModule,
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
