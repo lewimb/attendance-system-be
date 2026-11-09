@@ -6,6 +6,10 @@ export const EMPLOYEE_PATTERNS = {
   DEACTIVATE: 'employee.deactivate',
 } as const;
 
+export const DEPARTMENT_PATTERNS = {
+  FIND_ALL: 'department.find_all',
+} as const;
+
 export const ATTENDANCE_PATTERNS = {
   CHECK_IN: 'attendance.check_in',
   CHECK_OUT: 'attendance.check_out',
