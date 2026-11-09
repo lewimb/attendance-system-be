@@ -2,6 +2,11 @@ import { Controller, Get, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { SkipThrottle } from '@nestjs/throttler';
 import {
+  ApiOperation,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
   HealthCheck,
   HealthCheckService,
   HealthIndicatorService,
@@ -15,9 +20,12 @@ import {
 import { Public } from '../common/decorators/jwt-auth.decorator.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
 import { sendRpc } from '../common/utils/send-rpc.util.js';
+import { ApiEnvelope } from '../common/swagger/decorators.js';
+import { HealthModel } from '../common/swagger/models.js';
 
 const CHECK_TIMEOUT_MS = 3000;
 
+@ApiTags('health')
 @Controller('health')
 export class HealthController {
   constructor(
@@ -28,10 +36,20 @@ export class HealthController {
     @Inject(ATTENDANCE_SERVICE) private readonly attendanceClient: ClientProxy,
   ) {}
 
+  @ApiOperation({
+    summary: 'Check the gateway database and both services',
+    description:
+      'Each service also checks its own database. Not rate limited and not cached.',
+  })
+  @ApiEnvelope(HealthModel, { message: 'Healthy' })
+  @ApiServiceUnavailableResponse({
+    description: 'A check failed. The body is not wrapped.',
+    type: HealthModel,
+  })
   @Get()
   @Public()
   @SkipThrottle()
-  @HealthCheck()
+  @HealthCheck({ swaggerDocumentation: false })
   @ResponseMessage('Healthy')
   check() {
     return this.health.check([

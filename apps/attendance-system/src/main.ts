@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module.js';
+import { setupSwagger } from './swagger.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -9,6 +10,9 @@ async function bootstrap() {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'same-site' },
+      contentSecurityPolicy: {
+        directives: { upgradeInsecureRequests: null },
+      },
     }),
   );
 
@@ -20,6 +24,8 @@ async function bootstrap() {
     ) ?? ['http://localhost:5173'],
     credentials: true,
   });
+
+  if (process.env.NODE_ENV !== 'production') setupSwagger(app);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

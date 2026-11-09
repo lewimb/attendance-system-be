@@ -13,6 +13,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   CreateEmployeeDto,
   EMPLOYEE_PATTERNS,
@@ -27,7 +28,18 @@ import { Role } from '../common/decorators/role.decorator.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
 import { sendRpc } from '../common/utils/send-rpc.util.js';
 import { AuthService } from '../auth/auth.service.js';
+import {
+  ApiAuth,
+  ApiEnvelope,
+  ApiError,
+  ApiValidationError,
+} from '../common/swagger/decorators.js';
+import {
+  EmployeeModel,
+  EmployeeWithRoleModel,
+} from '../common/swagger/models.js';
 
+@ApiTags('employees')
 @Controller('employees')
 export class EmployeeController {
   constructor(
@@ -35,6 +47,25 @@ export class EmployeeController {
     private readonly authService: AuthService,
   ) {}
 
+  @ApiOperation({ summary: 'List employees (HR admin)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 10,
+    description: 'Max 100',
+  })
+  @ApiQuery({ name: 'departmentId', required: false, type: Number })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  @ApiQuery({ name: 'sortBy', required: false, enum: EMPLOYEE_SORT_FIELDS })
+  @ApiQuery({ name: 'order', required: false, enum: ['asc', 'desc'] })
+  @ApiAuth({ hrOnly: true })
+  @ApiEnvelope(EmployeeWithRoleModel, {
+    paginated: true,
+    message: 'Employees retrieved',
+  })
+  @ApiValidationError()
   @Get()
   @Role('HR_ADMIN')
   @ResponseMessage('Employees retrieved')
@@ -75,6 +106,14 @@ export class EmployeeController {
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.FIND_ALL, payload);
   }
 
+  @ApiOperation({ summary: 'Create an employee (HR admin)' })
+  @ApiAuth({ hrOnly: true, write: true })
+  @ApiEnvelope(EmployeeModel, {
+    status: 201,
+    message: 'Employee succesfully created',
+  })
+  @ApiError(409, 'Email already registered or Employee code already exists')
+  @ApiValidationError()
   @Post()
   @Role('HR_ADMIN')
   @ResponseMessage('Employee succesfully created')
@@ -82,6 +121,10 @@ export class EmployeeController {
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.CREATE, dto);
   }
 
+  @ApiOperation({ summary: 'Get an employee (HR admin)' })
+  @ApiAuth({ hrOnly: true })
+  @ApiEnvelope(EmployeeWithRoleModel, { message: 'Employee retrieved' })
+  @ApiError(404, 'Employee not found')
   @Get(':id')
   @Role('HR_ADMIN')
   @ResponseMessage('Employee retrieved')
@@ -89,6 +132,16 @@ export class EmployeeController {
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.FIND_ONE, { id });
   }
 
+  @ApiOperation({
+    summary: 'Update an employee (HR admin)',
+    description:
+      'The employee code and the password cannot be changed. Send only the fields to change.',
+  })
+  @ApiAuth({ hrOnly: true, write: true })
+  @ApiEnvelope(null, { message: 'Employee successfully updated' })
+  @ApiError(404, 'Employee not found')
+  @ApiError(409, 'Email already registered')
+  @ApiValidationError()
   @Patch(':id')
   @Role('HR_ADMIN')
   @ResponseMessage('Employee successfully updated')
@@ -101,6 +154,14 @@ export class EmployeeController {
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.UPDATE, payload);
   }
 
+  @ApiOperation({
+    summary: 'Deactivate an employee (HR admin)',
+    description:
+      'Blocks login and revokes the refresh tokens. Employees are never deleted, so their attendance history stays.',
+  })
+  @ApiAuth({ hrOnly: true, write: true })
+  @ApiEnvelope(null, { message: 'Employee successfully deactivated' })
+  @ApiError(404, 'Employee not found')
   @Patch(':id/deactivate')
   @Role('HR_ADMIN')
   @ResponseMessage('Employee successfully deactivated')

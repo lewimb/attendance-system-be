@@ -1,4 +1,5 @@
 import {
+  applyDecorators,
   BadRequestException,
   Controller,
   DefaultValuePipe,
@@ -18,6 +19,15 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { fileTypeFromBuffer } from 'file-type';
 import {
@@ -44,10 +54,51 @@ import { Role } from '../common/decorators/role.decorator.js';
 import { sendRpc } from '../common/utils/send-rpc.util.js';
 import { PhotoStorageService } from './photo-storage.service.js';
 import { PhotoTooLargeFilter } from './photo-too-large.filter.js';
+import {
+  ApiAuth,
+  ApiEnvelope,
+  ApiError,
+  ApiValidationError,
+} from '../common/swagger/decorators.js';
+import {
+  AttendanceModel,
+  HrAttendanceModel,
+} from '../common/swagger/models.js';
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 const MAX_HR_RANGE_DAYS = 31;
 
+const ApiDateRange = (maxDays?: number) =>
+  applyDecorators(
+    ApiQuery({
+      name: 'from',
+      required: false,
+      type: String,
+      example: '2026-11-01',
+      description: 'YYYY-MM-DD, send together with to',
+    }),
+    ApiQuery({
+      name: 'to',
+      required: false,
+      type: String,
+      example: '2026-11-30',
+      description: `YYYY-MM-DD, send together with from.${maxDays ? ` At most ${maxDays} days.` : ''} Both default to the current month.`,
+    }),
+  );
+
+const ApiPage = () =>
+  applyDecorators(
+    ApiQuery({ name: 'page', required: false, type: Number, example: 1 }),
+    ApiQuery({
+      name: 'limit',
+      required: false,
+      type: Number,
+      example: 20,
+      description: 'Max 100',
+    }),
+  );
+
+@ApiTags('attendance')
 @Controller('attendance')
 export class AttendanceController {
   constructor(
@@ -56,6 +107,33 @@ export class AttendanceController {
     private readonly photoStorage: PhotoStorageService,
   ) {}
 
+  @ApiOperation({
+    summary: 'Check in for today with a photo',
+    description:
+      'The date and time come from the server. Status is LATE after WORK_START_TIME in BUSINESS_TZ.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['photo'],
+      properties: {
+        photo: {
+          type: 'string',
+          format: 'binary',
+          description: 'JPEG or PNG, max 3 MB, checked by its content',
+        },
+      },
+    },
+  })
+  @ApiAuth({ write: true })
+  @ApiEnvelope(AttendanceModel, { status: 201, message: 'Checked in' })
+  @ApiError(400, 'Photo is required', ['PHOTO_REQUIRED'])
+  @ApiError(409, 'Already checked in today', ['ALREADY_CHECKED_IN'])
+  @ApiError(413, 'Photo must be at most 3 MB', ['PHOTO_TOO_LARGE'])
+  @ApiError(415, 'Photo must be a JPEG or PNG image', [
+    'UNSUPPORTED_PHOTO_TYPE',
+  ])
   @Post('check-in')
   @ResponseMessage('Checked in')
   @UseFilters(PhotoTooLargeFilter)
@@ -104,6 +182,13 @@ export class AttendanceController {
     }
   }
 
+  @ApiOperation({ summary: "Check out of today's attendance" })
+  @ApiAuth({ write: true })
+  @ApiEnvelope(AttendanceModel, { message: 'Checked out' })
+  @ApiError(409, 'Not checked in today', [
+    'NOT_CHECKED_IN',
+    'ALREADY_CHECKED_OUT',
+  ])
   @Post('check-out')
   @HttpCode(200)
   @ResponseMessage('Checked out')
@@ -116,6 +201,15 @@ export class AttendanceController {
     );
   }
 
+  @ApiOperation({ summary: 'List my own attendance' })
+  @ApiDateRange()
+  @ApiPage()
+  @ApiAuth()
+  @ApiEnvelope(AttendanceModel, {
+    paginated: true,
+    message: 'Attendance retrieved',
+  })
+  @ApiValidationError()
   @Get('me')
   @ResponseMessage('Attendance retrieved')
   findMine(
@@ -137,6 +231,22 @@ export class AttendanceController {
     );
   }
 
+  @ApiOperation({
+    summary: 'List all attendance, view only (HR admin)',
+    description:
+      "Each row includes the employee's code, name and department, or null when the employee no longer exists.",
+  })
+  @ApiDateRange(MAX_HR_RANGE_DAYS)
+  @ApiQuery({ name: 'employeeId', required: false, type: Number })
+  @ApiQuery({ name: 'departmentId', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: ['PRESENT', 'LATE'] })
+  @ApiPage()
+  @ApiAuth({ hrOnly: true })
+  @ApiEnvelope(HrAttendanceModel, {
+    paginated: true,
+    message: 'Attendance retrieved',
+  })
+  @ApiValidationError()
   @Get()
   @Role('HR_ADMIN')
   @ResponseMessage('Attendance retrieved')
@@ -188,6 +298,21 @@ export class AttendanceController {
     };
   }
 
+  @ApiOperation({
+    summary: 'Get the check-in photo',
+    description:
+      'Employees can only get their own photos. HR admins can get any photo.',
+  })
+  @ApiProduces('image/jpeg', 'image/png')
+  @ApiOkResponse({
+    description: 'The photo, not wrapped',
+    content: {
+      'image/jpeg': { schema: { type: 'string', format: 'binary' } },
+      'image/png': { schema: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiAuth()
+  @ApiError(404, 'Attendance not found', ['NOT_FOUND'])
   @Get(':id/photo')
   async findPhoto(
     @Param('id', ParseIntPipe) id: number,
