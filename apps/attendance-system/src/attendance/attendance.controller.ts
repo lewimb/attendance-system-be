@@ -13,6 +13,7 @@ import {
   StreamableFile,
   UnsupportedMediaTypeException,
   UploadedFile,
+  UseFilters,
   UseInterceptors,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -42,6 +43,7 @@ import { ResponseMessage } from '../common/decorators/response-message.decorator
 import { Role } from '../common/decorators/role.decorator.js';
 import { sendRpc } from '../common/utils/send-rpc.util.js';
 import { PhotoStorageService } from './photo-storage.service.js';
+import { PhotoTooLargeFilter } from './photo-too-large.filter.js';
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 const MAX_HR_RANGE_DAYS = 31;
@@ -56,6 +58,7 @@ export class AttendanceController {
 
   @Post('check-in')
   @ResponseMessage('Checked in')
+  @UseFilters(PhotoTooLargeFilter)
   @UseInterceptors(
     FileInterceptor('photo', {
       limits: { fileSize: MAX_PHOTO_BYTES, files: 1 },
@@ -66,14 +69,20 @@ export class AttendanceController {
     @UploadedFile() photo: Express.Multer.File | undefined,
   ) {
     if (!photo || photo.size === 0) {
-      throw new BadRequestException('Photo is required');
+      throw new BadRequestException({
+        statusCode: 400,
+        code: 'PHOTO_REQUIRED',
+        message: 'Photo is required',
+      });
     }
 
     const mime = (await fileTypeFromBuffer(photo.buffer))?.mime;
     if (mime !== 'image/jpeg' && mime !== 'image/png') {
-      throw new UnsupportedMediaTypeException(
-        'Photo must be a JPEG or PNG image',
-      );
+      throw new UnsupportedMediaTypeException({
+        statusCode: 415,
+        code: 'UNSUPPORTED_PHOTO_TYPE',
+        message: 'Photo must be a JPEG or PNG image',
+      });
     }
 
     const photoPath = await this.photoStorage.save(photo.buffer, mime);

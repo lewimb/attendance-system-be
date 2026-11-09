@@ -20,12 +20,15 @@ export function sendRpc<T>(
         if (err instanceof TimeoutError)
           return throwError(() => new HttpException('Service timeout', 504));
 
-        const { statusCode, message } = (err ?? {}) as {
+        const { statusCode, code, message } = (err ?? {}) as {
           statusCode?: number;
+          code?: string;
           message?: string | string[];
         };
         if (typeof statusCode === 'number' && message)
-          return throwError(() => new HttpException(message, statusCode));
+          return throwError(
+            () => new HttpException({ statusCode, code, message }, statusCode),
+          );
 
         return throwError(() => new HttpException('Service unavailable', 502));
       }),

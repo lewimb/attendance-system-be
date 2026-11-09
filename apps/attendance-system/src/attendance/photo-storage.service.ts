@@ -52,7 +52,11 @@ export class PhotoStorageService {
       await stat(fullPath);
     } catch {
       this.logger.error(`Photo missing on disk: ${relativePath}`);
-      throw new NotFoundException('Photo not found');
+      throw new NotFoundException({
+        statusCode: 404,
+        code: 'NOT_FOUND',
+        message: 'Photo not found',
+      });
     }
 
     return createReadStream(fullPath);
@@ -61,7 +65,11 @@ export class PhotoStorageService {
   private resolve(relativePath: string) {
     const fullPath = resolve(this.root, relativePath);
     if (!fullPath.startsWith(this.root + sep)) {
-      throw new NotFoundException('Photo not found');
+      throw new NotFoundException({
+        statusCode: 404,
+        code: 'NOT_FOUND',
+        message: 'Photo not found',
+      });
     }
     return fullPath;
   }
