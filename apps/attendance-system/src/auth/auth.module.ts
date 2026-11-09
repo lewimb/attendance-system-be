@@ -26,5 +26,6 @@ import { RoleGuard } from './guards/role/role.guard.js';
       useClass: RoleGuard,
     },
   ],
+  exports: [AuthService],
 })
 export class AuthModule {}

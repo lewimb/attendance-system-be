@@ -102,4 +102,17 @@ export class EmployeeService {
         message: 'Employee not found',
       });
   }
+
+  async deactivate(id: number) {
+    const result = await this.employeeRepository.update(
+      { id: String(id) },
+      { isActive: false },
+    );
+
+    if (result.affected === 0)
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Employee not found',
+      });
+  }
 }

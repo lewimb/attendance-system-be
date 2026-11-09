@@ -3,4 +3,5 @@ export const EMPLOYEE_PATTERNS = {
   FIND_ONE: 'employee.find_one',
   CREATE: 'employee.create',
   UPDATE: 'employee.update',
+  DEACTIVATE: 'employee.deactivate',
 } as const;

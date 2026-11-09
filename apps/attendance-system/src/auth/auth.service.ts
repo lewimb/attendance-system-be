@@ -78,6 +78,13 @@ export class AuthService {
     );
   }
 
+  async revokedRefreshTokenById(id: number) {
+    await this.refreshToken.update(
+      { employeeId: String(id), revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+  }
+
   // Logic Related
   async login(auth: Auth) {
     const employee = await this.employeeRepository.findOne({

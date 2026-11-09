@@ -3,9 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { EMPLOYEE_SERVICE } from '@app/common';
 import { EmployeeController } from './employee.controller.js';
+import { AuthModule } from '../auth/auth.module.js';
 
 @Module({
   imports: [
+    AuthModule,
     ClientsModule.registerAsync([
       {
         name: EMPLOYEE_SERVICE,

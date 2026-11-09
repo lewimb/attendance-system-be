@@ -22,11 +22,13 @@ import {
 import { Role } from '../common/decorators/role.decorator.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
 import { sendRpc } from '../common/utils/send-rpc.util.js';
+import { AuthService } from '../auth/auth.service.js';
 
 @Controller('employee')
 export class EmployeeController {
   constructor(
     @Inject(EMPLOYEE_SERVICE) private readonly employeeClient: ClientProxy,
+    private readonly authService: AuthService,
   ) {}
 
   @Get()
@@ -68,5 +70,13 @@ export class EmployeeController {
     const payload: UpdateEmployeePayload = { ...dto, id };
 
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.UPDATE, payload);
+  }
+
+  @Patch(':id/deactivate')
+  @Role('HR_ADMIN')
+  @ResponseMessage('Employee successfully deactivated')
+  async deactivate(@Param('id', ParseIntPipe) id: number) {
+    await sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.DEACTIVATE, { id });
+    await this.authService.revokedRefreshTokenById(id);
   }
 }

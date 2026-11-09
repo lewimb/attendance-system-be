@@ -30,4 +30,9 @@ export class EmployeeController {
   update(@Payload() payload: UpdateEmployeePayload) {
     return this.employeeService.update(payload);
   }
+
+  @MessagePattern(EMPLOYEE_PATTERNS.DEACTIVATE)
+  deactivate(@Payload() payload: { id: number }) {
+    return this.employeeService.deactivate(payload.id);
+  }
 }
