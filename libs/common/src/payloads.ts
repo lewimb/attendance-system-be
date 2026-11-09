@@ -17,6 +17,22 @@ export type FindAllEmployeesPayload = {
   limit: number;
 };
 
+export type FindEmployeeIdsByDepartmentPayload = {
+  departmentId: number;
+};
+
+export type FindEmployeesByIdsPayload = {
+  ids: string[];
+};
+
+export type EmployeeSummary = {
+  id: string;
+  employeeCode: string;
+  fullName: string;
+  departmentId: number | null;
+  departmentName: string | null;
+};
+
 export type Paginated<T> = {
   items: T[];
   total: number;

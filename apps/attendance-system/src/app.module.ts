@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmployeeModule } from './employee/employee.module.js';
 import { ConfigModule } from '@nestjs/config';
+import { AttendanceModule } from './attendance/attendance.module.js';
 import { DepartmentModule } from './department/department.module.js';
 
 @Module({
@@ -26,6 +27,7 @@ import { DepartmentModule } from './department/department.module.js';
     }),
     AuthModule,
     EmployeeModule,
+    AttendanceModule,
     DepartmentModule,
   ],
   providers: [

@@ -4,6 +4,8 @@ export const EMPLOYEE_PATTERNS = {
   CREATE: 'employee.create',
   UPDATE: 'employee.update',
   DEACTIVATE: 'employee.deactivate',
+  FIND_IDS_BY_DEPARTMENT: 'employee.find_ids_by_department',
+  FIND_BY_IDS: 'employee.find_by_ids',
 } as const;
 
 export const DEPARTMENT_PATTERNS = {

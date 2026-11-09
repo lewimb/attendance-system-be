@@ -4,6 +4,8 @@ import {
   CreateEmployeeDto,
   EMPLOYEE_PATTERNS,
   type FindAllEmployeesPayload,
+  type FindEmployeeIdsByDepartmentPayload,
+  type FindEmployeesByIdsPayload,
   type UpdateEmployeePayload,
 } from '@app/common';
 import { EmployeeService } from './employee.service.js';
@@ -15,6 +17,16 @@ export class EmployeeController {
   @MessagePattern(EMPLOYEE_PATTERNS.FIND_ALL)
   findAll(@Payload() payload: FindAllEmployeesPayload) {
     return this.employeeService.findAll(payload);
+  }
+
+  @MessagePattern(EMPLOYEE_PATTERNS.FIND_IDS_BY_DEPARTMENT)
+  findIdsByDepartment(@Payload() payload: FindEmployeeIdsByDepartmentPayload) {
+    return this.employeeService.findIdsByDepartment(payload);
+  }
+
+  @MessagePattern(EMPLOYEE_PATTERNS.FIND_BY_IDS)
+  findByIds(@Payload() payload: FindEmployeesByIdsPayload) {
+    return this.employeeService.findByIds(payload);
   }
 
   @MessagePattern(EMPLOYEE_PATTERNS.FIND_ONE)

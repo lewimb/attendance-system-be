@@ -10,10 +10,14 @@ import {
 import {
   type CreateEmployeeDto,
   Employee,
+  type EmployeeSummary,
   type FindAllEmployeesPayload,
+  type FindEmployeeIdsByDepartmentPayload,
+  type FindEmployeesByIdsPayload,
   type Paginated,
   type UpdateEmployeePayload,
 } from '@app/common';
+import { Department } from '../department/department.entity.js';
 
 const SALT_ROUNDS = 10;
 
@@ -48,6 +52,36 @@ export class EmployeeService {
     });
 
     return { items, total, page, limit };
+  }
+
+  async findIdsByDepartment({
+    departmentId,
+  }: FindEmployeeIdsByDepartmentPayload): Promise<string[]> {
+    const employees = await this.employeeRepository.find({
+      select: { id: true },
+      where: { departmentId },
+    });
+
+    return employees.map((employee) => employee.id);
+  }
+
+  findByIds({ ids }: FindEmployeesByIdsPayload): Promise<EmployeeSummary[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+
+    return this.employeeRepository
+      .createQueryBuilder('employee')
+      .leftJoin(
+        Department,
+        'department',
+        'department.id = employee.departmentId',
+      )
+      .select('employee.id', 'id')
+      .addSelect('employee.employeeCode', 'employeeCode')
+      .addSelect('employee.fullName', 'fullName')
+      .addSelect('employee.departmentId', 'departmentId')
+      .addSelect('department.name', 'departmentName')
+      .where('employee.id IN (:...ids)', { ids })
+      .getRawMany<EmployeeSummary>();
   }
 
   async findOneById(id: number): Promise<Employee> {
