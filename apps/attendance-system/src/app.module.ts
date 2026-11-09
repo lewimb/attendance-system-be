@@ -8,6 +8,7 @@ import { EmployeeModule } from './employee/employee.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { AttendanceModule } from './attendance/attendance.module.js';
 import { DepartmentModule } from './department/department.module.js';
+import { HealthModule } from './health/health.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { DepartmentModule } from './department/department.module.js';
     EmployeeModule,
     AttendanceModule,
     DepartmentModule,
+    HealthModule,
   ],
   providers: [
     {

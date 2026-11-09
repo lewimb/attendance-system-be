@@ -19,3 +19,7 @@ export const ATTENDANCE_PATTERNS = {
   FIND_ALL: 'attendance.find_all',
   FIND_PHOTO: 'attendance.find_photo',
 } as const;
+
+export const HEALTH_PATTERNS = {
+  CHECK: 'health.check',
+} as const;
