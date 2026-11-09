@@ -63,6 +63,8 @@ export class AuthController {
     return;
   }
 
+  @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('/refresh')
   async refresh(
     @Res({ passthrough: true }) res: Response,
