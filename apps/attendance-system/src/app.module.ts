@@ -9,10 +9,11 @@ import { ConfigModule } from '@nestjs/config';
 import { AttendanceModule } from './attendance/attendance.module.js';
 import { DepartmentModule } from './department/department.module.js';
 import { HealthModule } from './health/health.module.js';
+import { validateEnv } from './config/env.validation.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     ThrottlerModule.forRoot([{ ttl: 10000, limit: 5 }]),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
