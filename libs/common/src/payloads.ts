@@ -1,4 +1,18 @@
+export const EMPLOYEE_SORT_FIELDS = [
+  'id',
+  'employeeCode',
+  'fullName',
+  'email',
+  'createdAt',
+] as const;
+export type EmployeeSortField = (typeof EMPLOYEE_SORT_FIELDS)[number];
+export type SortOrder = 'ASC' | 'DESC';
+
 export type FindAllEmployeesPayload = {
+  departmentId?: number;
+  isActive?: boolean;
+  sortBy?: EmployeeSortField;
+  order?: SortOrder;
   page: number;
   limit: number;
 };

@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  type FindOptionsOrder,
+  type FindOptionsWhere,
+  Repository,
+} from 'typeorm';
 import {
   type CreateEmployeeDto,
   Employee,
@@ -21,12 +25,24 @@ export class EmployeeService {
   ) {}
 
   async findAll({
+    departmentId,
+    isActive,
+    sortBy = 'id',
+    order = 'ASC',
     page,
     limit,
   }: FindAllEmployeesPayload): Promise<Paginated<Employee>> {
+    const where: FindOptionsWhere<Employee> = {};
+    if (departmentId !== undefined) where.departmentId = departmentId;
+    if (isActive !== undefined) where.isActive = isActive;
+
+    const orderBy: FindOptionsOrder<Employee> = { [sortBy]: order };
+    if (sortBy !== 'id') orderBy.id = 'ASC';
+
     const [items, total] = await this.employeeRepository.findAndCount({
+      where,
       relations: { role: true },
-      order: { id: 'ASC' },
+      order: orderBy,
       skip: (page - 1) * limit,
       take: limit,
     });

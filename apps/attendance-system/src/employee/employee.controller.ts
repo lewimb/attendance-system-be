@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   DefaultValuePipe,
   Get,
   Inject,
   Param,
+  ParseBoolPipe,
   ParseIntPipe,
   Patch,
   Post,
@@ -15,6 +17,8 @@ import {
   CreateEmployeeDto,
   EMPLOYEE_PATTERNS,
   EMPLOYEE_SERVICE,
+  EMPLOYEE_SORT_FIELDS,
+  type EmployeeSortField,
   type FindAllEmployeesPayload,
   UpdateEmployeeDto,
   type UpdateEmployeePayload,
@@ -24,7 +28,7 @@ import { ResponseMessage } from '../common/decorators/response-message.decorator
 import { sendRpc } from '../common/utils/send-rpc.util.js';
 import { AuthService } from '../auth/auth.service.js';
 
-@Controller('employee')
+@Controller('employees')
 export class EmployeeController {
   constructor(
     @Inject(EMPLOYEE_SERVICE) private readonly employeeClient: ClientProxy,
@@ -35,10 +39,35 @@ export class EmployeeController {
   @Role('HR_ADMIN')
   @ResponseMessage('Employees retrieved')
   findAllEmployee(
+    @Query('departmentId', new ParseIntPipe({ optional: true }))
+    departmentId: number | undefined,
+    @Query('isActive', new ParseBoolPipe({ optional: true }))
+    isActive: boolean | undefined,
+    @Query('sortBy') sortBy: string | undefined,
+    @Query('order') order: string | undefined,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
+    if (sortBy !== undefined && !this.isSortField(sortBy)) {
+      throw new BadRequestException(
+        `sortBy must be one of: ${EMPLOYEE_SORT_FIELDS.join(', ')}`,
+      );
+    }
+
+    const direction = order?.toUpperCase();
+    if (
+      direction !== undefined &&
+      direction !== 'ASC' &&
+      direction !== 'DESC'
+    ) {
+      throw new BadRequestException('order must be asc or desc');
+    }
+
     const payload: FindAllEmployeesPayload = {
+      departmentId,
+      isActive,
+      sortBy,
+      order: direction,
       page: Math.max(page, 1),
       limit: Math.min(Math.max(limit, 1), 100),
     };
@@ -78,5 +107,9 @@ export class EmployeeController {
   async deactivate(@Param('id', ParseIntPipe) id: number) {
     await sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.DEACTIVATE, { id });
     await this.authService.revokedRefreshTokenById(id);
+  }
+
+  private isSortField(value: string): value is EmployeeSortField {
+    return (EMPLOYEE_SORT_FIELDS as readonly string[]).includes(value);
   }
 }
