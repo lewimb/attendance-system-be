@@ -13,6 +13,7 @@ import { AuthService } from './auth.service.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
 import { Response } from 'express';
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Public } from '../common/decorators/jwt-auth.decorator.js';
 import {
   ApiCsrf,
@@ -24,6 +25,8 @@ import {
   EmployeeWithRoleModel,
   LoginResponseModel,
 } from '../common/swagger/models.js';
+
+const AUTH_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 
 const TOKEN_COOKIES = {
   'Set-Cookie': {
@@ -45,6 +48,7 @@ export class AuthController {
   })
   @ApiError(401, 'Invalid credentials')
   @ApiValidationError()
+  @Throttle(AUTH_THROTTLE)
   @Public()
   @ResponseMessage('Successfully logged in')
   @HttpCode(HttpStatus.OK)
@@ -106,6 +110,7 @@ export class AuthController {
     401,
     'Invalid refresh token, Refresh token expired or Refresh token reuse detected',
   )
+  @Throttle(AUTH_THROTTLE)
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('/refresh')

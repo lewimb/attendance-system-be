@@ -14,7 +14,7 @@ import { validateEnv } from './config/env.validation.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
-    ThrottlerModule.forRoot([{ ttl: 10000, limit: 5 }]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'mysql',

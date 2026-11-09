@@ -159,7 +159,7 @@ node dist/apps/attendance-system/main
 - `POST /auth/refresh` rotates the refresh token. Presenting an already rotated refresh token again is treated as theft: every refresh token of that employee is revoked and they must log in again.
 - **Every `POST`, `PUT`, `PATCH` and `DELETE` request must send `X-Requested-With`** (for example `X-Requested-With: XMLHttpRequest`), including login. Requests without it get `403 CSRF_HEADER_MISSING`.
 - Browser clients must send cookies with `credentials: 'include'` (fetch) or `withCredentials: true` (axios).
-- Requests are limited to 5 per 10 seconds per client (`429`), except `/health`.
+- Each route allows 60 requests per minute per client, and `POST /auth/login` and `POST /auth/refresh` allow 10, to slow down password guessing. Over the limit returns `429` with a `Retry-After` header. `/health` is not limited.
 
 ## API
 
