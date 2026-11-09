@@ -1,11 +1,5 @@
-// FIX: randomUUID for a unique jwtid on each refresh token
 import { createHash, randomUUID } from 'node:crypto';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Auth } from './auth.interface.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
