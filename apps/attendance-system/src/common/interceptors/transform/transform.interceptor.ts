@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
 import { Response } from 'express';
@@ -20,11 +21,15 @@ export class TransformInterceptor<T> implements NestInterceptor<T> {
       response.statusMessage;
 
     return next.handle().pipe(
-      map((data: T) => ({
-        data,
-        statusCode: response.statusCode ? response.statusCode : 200,
-        message: message,
-      })),
+      map((data: T) =>
+        data instanceof StreamableFile
+          ? data
+          : {
+              data,
+              statusCode: response.statusCode ? response.statusCode : 200,
+              message: message,
+            },
+      ),
     );
   }
 }
