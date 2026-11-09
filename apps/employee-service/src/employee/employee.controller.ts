@@ -1,6 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { EMPLOYEE_PATTERNS, type FindAllEmployeesPayload } from '@app/common';
+import {
+  CreateEmployeeDto,
+  EMPLOYEE_PATTERNS,
+  type FindAllEmployeesPayload,
+} from '@app/common';
 import { EmployeeService } from './employee.service.js';
 
 @Controller()
@@ -15,5 +19,10 @@ export class EmployeeController {
   @MessagePattern(EMPLOYEE_PATTERNS.FIND_ONE)
   findOne(@Payload() payload: { id: number }) {
     return this.employeeService.findOneById(payload.id);
+  }
+
+  @MessagePattern(EMPLOYEE_PATTERNS.CREATE)
+  create(@Payload() payload: CreateEmployeeDto) {
+    return this.employeeService.create(payload);
   }
 }

@@ -1,14 +1,17 @@
 import {
+  Body,
   Controller,
   DefaultValuePipe,
   Get,
   Inject,
   Param,
   ParseIntPipe,
+  Post,
   Query,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
+  CreateEmployeeDto,
   EMPLOYEE_PATTERNS,
   EMPLOYEE_SERVICE,
   type FindAllEmployeesPayload,
@@ -36,6 +39,13 @@ export class EmployeeController {
     };
 
     return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.FIND_ALL, payload);
+  }
+
+  @Post()
+  @Role('HR_ADMIN')
+  @ResponseMessage('Employee succesfully created')
+  createEmployee(@Body() dto: CreateEmployeeDto) {
+    return sendRpc(this.employeeClient, EMPLOYEE_PATTERNS.CREATE, dto);
   }
 
   @Get(':id')

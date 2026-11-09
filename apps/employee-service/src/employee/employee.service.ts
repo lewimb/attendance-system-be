@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import bcrypt from 'bcryptjs';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
+  type CreateEmployeeDto,
   Employee,
   type FindAllEmployeesPayload,
   type Paginated,
 } from '@app/common';
+
+const SALT_ROUNDS = 10;
 
 @Injectable()
 export class EmployeeService {
@@ -43,5 +47,40 @@ export class EmployeeService {
     }
 
     return employee;
+  }
+
+  async existing(
+    email: string,
+    employeeCode: string,
+  ): Promise<Employee | null> {
+    return await this.employeeRepository.findOne({
+      where: [{ email: email }, { employeeCode: employeeCode }],
+    });
+  }
+
+  async create(
+    payload: CreateEmployeeDto,
+  ): Promise<Omit<Employee, 'password'>> {
+    const existing = await this.existing(payload.email, payload.employeeCode);
+
+    if (existing) {
+      throw new RpcException({
+        statusCode: 409,
+        message:
+          existing.email === payload.email
+            ? 'Email already registered'
+            : 'Employee code already exists',
+      });
+    }
+
+    const employee = this.employeeRepository.create({
+      ...payload,
+      password: await bcrypt.hash(payload.password, SALT_ROUNDS),
+    });
+
+    const saved = await this.employeeRepository.save(employee);
+
+    const { password: _password, ...result } = saved;
+    return result;
   }
 }
