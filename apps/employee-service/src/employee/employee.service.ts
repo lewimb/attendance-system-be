@@ -5,7 +5,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   type FindOptionsOrder,
   type FindOptionsWhere,
+  QueryFailedError,
   Repository,
+  type UpdateResult,
 } from 'typeorm';
 import {
   type CreateEmployeeDto,
@@ -112,13 +114,14 @@ export class EmployeeService {
   async create(
     payload: CreateEmployeeDto,
   ): Promise<Omit<Employee, 'password'>> {
-    const existing = await this.existing(payload.email, payload.employeeCode);
+    const email = this.normalizeEmail(payload.email);
+    const existing = await this.existing(email, payload.employeeCode);
 
     if (existing) {
       throw new RpcException({
         statusCode: 409,
         message:
-          existing.email === payload.email
+          existing.email.toLowerCase() === email
             ? 'Email already registered'
             : 'Employee code already exists',
       });
@@ -126,10 +129,16 @@ export class EmployeeService {
 
     const employee = this.employeeRepository.create({
       ...payload,
+      email,
       password: await bcrypt.hash(payload.password, SALT_ROUNDS),
     });
 
-    const saved = await this.employeeRepository.save(employee);
+    let saved: Employee;
+    try {
+      saved = await this.employeeRepository.save(employee);
+    } catch (err) {
+      throw this.conflictFrom(err) ?? err;
+    }
 
     const { password: _password, ...result } = saved;
     return result;
@@ -139,13 +148,22 @@ export class EmployeeService {
     const {
       id,
       password: _password,
+      employeeCode: _employeeCode,
       ...data
-    } = payload as UpdateEmployeePayload & { password?: string };
+    } = payload as UpdateEmployeePayload & {
+      password?: string;
+      employeeCode?: string;
+    };
 
-    const result = await this.employeeRepository.update(
-      { id: String(id) },
-      data,
-    );
+    if (data.email !== undefined) data.email = this.normalizeEmail(data.email);
+
+    let result: UpdateResult;
+    try {
+      result = await this.employeeRepository.update({ id: String(id) }, data);
+    } catch (err) {
+      throw this.conflictFrom(err) ?? err;
+    }
+
     if (result.affected === 0)
       throw new RpcException({
         statusCode: 404,
@@ -164,5 +182,28 @@ export class EmployeeService {
         statusCode: 404,
         message: 'Employee not found',
       });
+  }
+
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+  }
+
+  private conflictFrom(err: unknown): RpcException | undefined {
+    if (!(err instanceof QueryFailedError)) return undefined;
+
+    const { code, sqlMessage } = err.driverError as {
+      code?: string;
+      sqlMessage?: string;
+    };
+    if (code !== 'ER_DUP_ENTRY') return undefined;
+
+    const key = /for key '(?:[^']*\.)?([^']+)'/.exec(sqlMessage ?? '')?.[1];
+    return new RpcException({
+      statusCode: 409,
+      message:
+        key === 'email'
+          ? 'Email already registered'
+          : 'Employee code already exists',
+    });
   }
 }

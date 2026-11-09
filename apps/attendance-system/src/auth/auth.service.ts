@@ -88,7 +88,7 @@ export class AuthService {
   // Logic Related
   async login(auth: Auth) {
     const employee = await this.employeeRepository.findOne({
-      where: { email: auth.email },
+      where: { email: auth.email.trim().toLowerCase() },
       relations: { role: true },
       select: {
         id: true,

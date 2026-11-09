@@ -37,7 +37,7 @@ export class CreateEmployeeDto {
 }
 
 export class UpdateEmployeeDto extends PartialType(
-  OmitType(CreateEmployeeDto, ['password'] as const),
+  OmitType(CreateEmployeeDto, ['password', 'employeeCode'] as const),
 ) {}
 
 export type UpdateEmployeePayload = UpdateEmployeeDto & { id: number };
