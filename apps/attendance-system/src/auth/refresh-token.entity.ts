@@ -6,12 +6,12 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Employee } from '../employee/employee.entity.js';
+import { Employee } from '@app/common';
 
 @Entity('refresh_tokens')
 export class RefreshToken {
   @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: string; // mysql2 returns BIGINT as string
+  id: string;
 
   @Column({ name: 'employee_id', type: 'bigint' })
   employeeId: string;

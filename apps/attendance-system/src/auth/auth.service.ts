@@ -9,7 +9,7 @@ import {
 import { Auth } from './auth.interface.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
-import { Employee } from '../employee/employee.entity.js';
+import { Employee } from '@app/common';
 import { comparePassword } from '../common/utils/password.util.js';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';

@@ -1,2 +1,2 @@
-// shared code for the gateway and services (message patterns, DTOs, utils)
-export {};
+export * from './entities/employee.entity.js';
+export * from './entities/role.entity.js';

@@ -3,7 +3,6 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -13,7 +12,7 @@ import { Role } from './role.entity.js';
 @Entity('employees')
 export class Employee {
   @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: string; // mysql2 returns BIGINT as string
+  id: string;
 
   @Column({ name: 'employee_code', length: 20, unique: true })
   employeeCode: string;
@@ -24,7 +23,6 @@ export class Employee {
   @Column({ length: 255, unique: true })
   email: string;
 
-  // excluded from queries by default, request it explicitly with `select`
   @Column({ length: 255, select: false })
   password: string;
 

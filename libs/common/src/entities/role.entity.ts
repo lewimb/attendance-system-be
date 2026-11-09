@@ -10,7 +10,7 @@ import { Employee } from './employee.entity.js';
 @Entity('roles')
 export class Role {
   @PrimaryGeneratedColumn({ type: 'smallint' })
-  id: string;
+  id: number;
 
   @Column({ name: 'name', length: 30, unique: true })
   roleName: string;
