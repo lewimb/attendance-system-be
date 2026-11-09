@@ -42,6 +42,8 @@ apps/
     src/department/       /departments route -> employee-service
     src/attendance/       /attendance routes, photo upload and storage
     src/health/           /health
+    src/common/swagger/   Swagger response models and decorators
+    src/swagger.ts        Swagger UI setup (/docs)
   employee-service/       employees and departments (TCP)
   attendance-service/     attendance records (TCP)
 libs/common/              message patterns, payload types, DTOs, shared entities
@@ -113,19 +115,39 @@ The seeder creates the roles, five departments, one HR admin and 100 employees. 
 
 Run each app in its own terminal, from the project root so they all read the same `.env`:
 
-```bash
-npx nest start employee-service --watch
-npx nest start attendance-service --watch
-npm run start:dev
-```
+| Terminal | Command | Ready when it prints |
+|---|---|---|
+| 1 | `npx nest start employee-service --watch` | `Employee service is listening on TCP port 3001` |
+| 2 | `npx nest start attendance-service --watch` | `Attendance service is listening on TCP port 3002` |
+| 3 | `npm run start:dev` | `Gateway is listening on HTTP port 3000` |
 
-`npm run start:dev` starts the gateway on http://localhost:3000. Check that everything is up:
+`--watch` rebuilds and restarts an app when you save one of its files. Stop an app with Ctrl+C.
+
+Check that everything is up:
 
 ```bash
 curl http://localhost:3000/health
 ```
 
-For a production build:
+It returns `"status": "ok"` with `database`, `employee_service` and `attendance_service` all `up`. A `503` with a service `down` means that app is not running or has crashed, so check its terminal.
+
+### 5. Try the API in Swagger
+
+Open http://localhost:3000/docs. The OpenAPI document is at http://localhost:3000/docs-json. Swagger is served whenever `NODE_ENV` is not `production`.
+
+1. Open **auth → POST /auth/login**, click **Try it out**, then **Execute**. The body is prefilled with the seeded HR admin.
+2. The browser now holds the `accessToken` cookie, so the other routes work directly, for example **GET /employees** or **GET /attendance**.
+3. On `POST` and `PATCH` routes, keep the prefilled `X-Requested-With` field, or the request gets `403 CSRF_HEADER_MISSING`.
+4. To act as an employee, log in as `employee001@example.com`. **POST /attendance/check-in** has a file picker for the photo.
+5. To use a Bearer token instead of the cookie, copy `accessToken` from the login response into **Authorize**.
+
+Each route shows its parameters, request body, wrapped response and error codes under **Responses**. After **Execute**, the real response appears above them, so you can compare the two.
+
+`POST /auth/logout` clears the cookies, so protected routes return `401` until you log in again.
+
+### 6. Production build
+
+Build the three apps, then start each `node` command in its own terminal. Swagger is not served when `NODE_ENV=production`.
 
 ```bash
 npx nest build employee-service
@@ -140,7 +162,7 @@ node dist/apps/attendance-system/main
 
 | Variable | Default | Used by | Description |
 |---|---|---|---|
-| `NODE_ENV` | | seeder | `production` blocks the seeder |
+| `NODE_ENV` | | gateway, seeder | `production` turns off Swagger and blocks the seeder |
 | `PORT` | `3000` | gateway | HTTP port |
 | `CORS_ORIGIN` | `http://localhost:5173` | gateway | Allowed frontend origins, comma separated |
 | `EMPLOYEE_SERVICE_HOST` / `_PORT` | `localhost` / `3001` | gateway, employee-service | Where employee-service listens |
@@ -163,7 +185,9 @@ node dist/apps/attendance-system/main
 
 ## API
 
-Base URL: `http://localhost:3000`. Successful responses are wrapped:
+Base URL: `http://localhost:3000`. Every route below, with its request and response schemas, is also in Swagger at http://localhost:3000/docs (see [Try the API in Swagger](#5-try-the-api-in-swagger)).
+
+Successful responses are wrapped:
 
 ```json
 { "data": { }, "statusCode": 200, "message": "Employees retrieved" }
