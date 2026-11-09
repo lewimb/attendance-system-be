@@ -1,132 +1,244 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# WFH Attendance System (Backend)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend for the Dexa Group fullstack technical test:
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+1. **Aplikasi Absensi WFH Karyawan**: employees log in and check in with the date and time captured by the server and a photo as proof of working from home.
+2. **Aplikasi Monitoring Karyawan**: HR admins add and update employee master data and view submitted attendance (view only).
 
-## Description
+Built with **NestJS 12 + TypeScript** and **MySQL 8**, as an API gateway in front of two microservices that talk over TCP.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Architecture
 
-## Project setup
-
-```bash
-$ npm install
+```
+React frontend (http://localhost:5173)
+        │  HTTP, JSON / multipart, cookies
+        ▼
+Gateway  (apps/attendance-system, HTTP :3000)
+  auth and refresh tokens, JWT / role / CSRF guards, rate limiting,
+  photo upload and streaming, helmet, CORS, health check
+        │  TCP (@nestjs/microservices, request/response message patterns)
+        ├──────────────────────────────┐
+        ▼                              ▼
+employee-service (TCP :3001)     attendance-service (TCP :3002)
+  employees, roles, departments    check-in, check-out, history,
+                                   HR attendance list, photo lookup
+        │                              │
+        └──────────────┬───────────────┘
+                       ▼
+                     MySQL
 ```
 
-## Compile and run the project
+- Only the gateway is meant to be reachable from outside. The services have no HTTP surface.
+- The gateway and services share the message pattern names, payload types and DTOs through `libs/common`, so they cannot drift apart.
+- Photos are not sent over TCP. The gateway validates and stores the file, then sends only its relative path to `attendance-service`.
 
-```bash
-# development
-$ npm run start
+### Project structure
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+apps/
+  attendance-system/      gateway (HTTP)
+    src/auth/             login, refresh, logout, me, JWT and CSRF guards
+    src/employee/         /employees routes -> employee-service
+    src/department/       /departments route -> employee-service
+    src/attendance/       /attendance routes, photo upload and storage
+    src/health/           /health
+  employee-service/       employees and departments (TCP)
+  attendance-service/     attendance records (TCP)
+libs/common/              message patterns, payload types, DTOs, shared entities
+migrations/               db-migrate migrations
+seeders/seeder.ts         development seed data
+storage/photos/           uploaded photos (ignored by git)
 ```
 
-## Run tests
+## Requirements
+
+- Node.js 22.18 or later (the seeder runs a `.ts` file directly with Node's built-in type stripping)
+- MySQL 8.0.16 or later (the `attendances` table uses a `CHECK` constraint)
+
+## Getting started
+
+### 1. Install
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 2. Configure
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+cp .env.example .env
+cp database.example.json database.json
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
+Fill in `.env` (see [Environment variables](#environment-variables)). The JWT secrets must be at least 32 characters, or the gateway refuses to start. To generate one:
 
 ```bash
-$ npx @nestjs/observe link
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ```
 
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
+Fill in `database.json` for the migrations, with the same database as `.env`:
 
-Or do it by hand:
+```json
+{
+  "dev": {
+    "driver": "mysql",
+    "user": "root",
+    "password": "your-password",
+    "host": "localhost",
+    "database": "attendance_system",
+    "port": "3306"
+  }
+}
+```
+
+### 3. Create the database, migrate and seed
+
+```sql
+CREATE DATABASE attendance_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
 
 ```bash
-$ npm install @nestjs/observe
+npx db-migrate up
+npm run seed
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
+The seeder creates the roles, five departments, one HR admin and 100 employees. It refuses to run when `NODE_ENV=production`.
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+| Account | Email | Password |
+|---|---|---|
+| HR admin | `hr.admin@example.com` | `Password123!` (or `SEED_PASSWORD`) |
+| Employees | `employee001@example.com` to `employee100@example.com` | same as above |
 
-## Resources
+### 4. Run
 
-Check out a few resources that may come in handy when working with NestJS:
+Run each app in its own terminal, from the project root so they all read the same `.env`:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npx nest start employee-service --watch
+npx nest start attendance-service --watch
+npm run start:dev
+```
 
-## Support
+`npm run start:dev` starts the gateway on http://localhost:3000. Check that everything is up:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+curl http://localhost:3000/health
+```
 
-## Stay in touch
+For a production build:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+npx nest build employee-service
+npx nest build attendance-service
+npx nest build attendance-system
+node dist/apps/employee-service/main
+node dist/apps/attendance-service/main
+node dist/apps/attendance-system/main
+```
 
-## License
+## Environment variables
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+| Variable | Default | Used by | Description |
+|---|---|---|---|
+| `NODE_ENV` | | seeder | `production` blocks the seeder |
+| `PORT` | `3000` | gateway | HTTP port |
+| `CORS_ORIGIN` | `http://localhost:5173` | gateway | Allowed frontend origins, comma separated |
+| `EMPLOYEE_SERVICE_HOST` / `_PORT` | `localhost` / `3001` | gateway, employee-service | Where employee-service listens |
+| `ATTENDANCE_SERVICE_HOST` / `_PORT` | `localhost` / `3002` | gateway, attendance-service | Where attendance-service listens |
+| `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE` | port `3306` | all apps, seeder | MySQL connection |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | required | gateway | At least 32 characters each |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | `attendance-app` / `attendance-web` | gateway | `iss` and `aud` claims, checked on every token |
+| `BUSINESS_TZ` | `Asia/Jakarta` | attendance-service | Time zone for the work date and the late rule |
+| `WORK_START_TIME` | `09:00` | attendance-service | Check-ins after this local time are `LATE` |
+| `STORAGE_ROOT` | `./storage/photos` | gateway | Where check-in photos are stored |
+| `SEED_PASSWORD` | `Password123!` | seeder | Password for every seeded account |
+
+## Authentication
+
+- `POST /auth/login` sets two HTTP-only cookies: `accessToken` (15 minutes) and `refreshToken` (7 days, sent only to `/auth`). Both are `Secure` and `SameSite=Strict`. The access token is also returned in the body, so API clients can send `Authorization: Bearer <token>` instead (except on `/auth/me`, which reads the cookie).
+- `POST /auth/refresh` rotates the refresh token. Presenting an already rotated refresh token again is treated as theft: every refresh token of that employee is revoked and they must log in again.
+- **Every `POST`, `PUT`, `PATCH` and `DELETE` request must send `X-Requested-With`** (for example `X-Requested-With: XMLHttpRequest`), including login. Requests without it get `403 CSRF_HEADER_MISSING`.
+- Browser clients must send cookies with `credentials: 'include'` (fetch) or `withCredentials: true` (axios).
+- Requests are limited to 5 per 10 seconds per client (`429`), except `/health`.
+
+## API
+
+Base URL: `http://localhost:3000`. Successful responses are wrapped:
+
+```json
+{ "data": { }, "statusCode": 200, "message": "Employees retrieved" }
+```
+
+Errors return the status code, a message and, where the client may need to react, a `code`:
+
+```json
+{ "statusCode": 409, "code": "ALREADY_CHECKED_IN", "message": "Already checked in today" }
+```
+
+List endpoints return `data: { items, total, page, limit }`, with `limit` capped at 100.
+
+### Auth
+
+| Method | Route | Access | Notes |
+|---|---|---|---|
+| POST | `/auth/login` | public | Body `{ email, password }` |
+| POST | `/auth/refresh` | public (refresh cookie) | Rotates both tokens |
+| POST | `/auth/logout` | public | Revokes the refresh token and clears the cookies |
+| GET | `/auth/me` | logged in | Current employee |
+
+### Employees and departments (HR admin)
+
+| Method | Route | Notes |
+|---|---|---|
+| GET | `/employees` | Query: `page`, `limit`, `departmentId`, `isActive`, `sortBy` (`id`, `employeeCode`, `fullName`, `email`, `createdAt`), `order` (`asc`, `desc`) |
+| POST | `/employees` | Body: `employeeCode`, `fullName`, `email`, `password` (min 8), `roleId`, `departmentId`, `phone` (optional) |
+| GET | `/employees/:id` | |
+| PATCH | `/employees/:id` | Any of `fullName`, `email`, `roleId`, `departmentId`, `phone`. The employee code and password cannot be changed here. |
+| PATCH | `/employees/:id/deactivate` | Blocks login and revokes the employee's refresh tokens |
+| GET | `/departments` | For the employee form |
+
+Duplicate emails or employee codes return `409`. Emails are trimmed and lowercased.
+
+### Attendance
+
+| Method | Route | Access | Notes |
+|---|---|---|---|
+| POST | `/attendance/check-in` | logged in | `multipart/form-data` with field `photo` (JPEG or PNG, max 3 MB) |
+| POST | `/attendance/check-out` | logged in | No body |
+| GET | `/attendance/me` | logged in | Own history. Query: `from`, `to` (`YYYY-MM-DD`, together), `page`, `limit`. Defaults to the current month. |
+| GET | `/attendance` | HR admin | View only. Query: `from`, `to` (max 31 days), `employeeId`, `departmentId`, `status` (`PRESENT`, `LATE`), `page`, `limit`. Each row includes the employee's code, name and department. |
+| GET | `/attendance/:id/photo` | owner or HR admin | Streams the photo. Other employees get `404`. |
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `PHOTO_REQUIRED` | No photo or an empty file |
+| 409 | `ALREADY_CHECKED_IN` | Already checked in today |
+| 409 | `NOT_CHECKED_IN` | Check-out without a check-in today |
+| 409 | `ALREADY_CHECKED_OUT` | Already checked out today |
+| 413 | `PHOTO_TOO_LARGE` | Photo over 3 MB |
+| 415 | `UNSUPPORTED_PHOTO_TYPE` | Not a real JPEG or PNG, whatever the file name says |
+| 404 | `NOT_FOUND` | Unknown attendance, or not the caller's own |
+
+### Health
+
+`GET /health` (public, not rate limited) checks the gateway database and both services, each of which checks its own database. It returns `200` when everything is up and `503` with the failing checks otherwise.
+
+## Design decisions
+
+- **Server time only.** The check-in and check-out times come from the server clock, never from the client. The work date is computed in `BUSINESS_TZ`, and times are stored in UTC.
+- **One attendance row per employee per day.** A unique key on `(employee_id, work_date)` is the final guard against double check-ins, so parallel requests give one success and one `409`. Check-out is a single conditional update, so it is safe against double or parallel requests too.
+- **HR is view only for attendance.** There are no routes to create, edit or delete someone else's attendance. HR admins are employees too and check in for themselves.
+- **Deactivate instead of delete.** Employees are never hard deleted, so their attendance history stays intact. Deactivation blocks login and revokes their refresh tokens.
+- **Photos on local disk, never public.** Files get random names, their real type is checked from the file content, and they are only served through the authorized photo route.
+- **One database for the scope of the test.** Each service owns its own tables (`employee-service`: `employees`, `roles`, `departments`; `attendance-service`: `attendances`), but they live in one MySQL database, so `attendances.employee_id` can keep a foreign key to `employees`. Splitting into a database per service would mean dropping that key and relying on the gateway, which only ever passes the employee id from the JWT. The gateway also connects to MySQL for authentication: it owns `refresh_tokens` and reads `employees` to check credentials.
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run start:dev` | Gateway in watch mode |
+| `npx nest start <app> --watch` | Any app in watch mode (`employee-service`, `attendance-service`, `attendance-system`) |
+| `npm test` | Unit tests (Vitest) |
+| `npm run lint` | Lint with oxlint |
+| `npm run format` | Format with Prettier |
+| `npm run seed` | Seed development data |
