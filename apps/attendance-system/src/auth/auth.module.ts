@@ -8,6 +8,7 @@ import { RefreshToken } from './refresh-token.entity.js';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard.js';
 import { RoleGuard } from './guards/role/role.guard.js';
+import { CsrfGuard } from './guards/csrf/csrf.guard.js';
 
 @Module({
   imports: [
@@ -17,6 +18,10 @@ import { RoleGuard } from './guards/role/role.guard.js';
   controllers: [AuthController],
   providers: [
     AuthService,
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

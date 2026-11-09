@@ -29,7 +29,7 @@ export class AuthController {
     const loginResponse = await this.authService.login(loginDto);
 
     res.cookie('accessToken', loginResponse.accessToken, {
-      sameSite: 'lax',
+      sameSite: 'strict',
       httpOnly: true,
       secure: true,
       maxAge: 15 * 60 * 1000, // express maxAge is in ms
@@ -73,7 +73,7 @@ export class AuthController {
     const refreshResponse = await this.authService.refresh(refreshToken);
 
     res.cookie('accessToken', refreshResponse.accessToken, {
-      sameSite: 'lax',
+      sameSite: 'strict',
       httpOnly: true,
       secure: true,
       maxAge: 15 * 60 * 1000, // express maxAge is in ms
