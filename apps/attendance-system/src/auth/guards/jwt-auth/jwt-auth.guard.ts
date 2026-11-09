@@ -9,6 +9,7 @@ import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../../../common/decorators/jwt-auth.decorator.js';
+import { jwtClaims } from '../../jwt-claims.js';
 
 type AuthRequest = Request & { user?: { id: string; role: string } };
 
@@ -42,6 +43,7 @@ export class JwtAuthGuard implements CanActivate {
       payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
         algorithms: ['HS256'],
+        ...jwtClaims(this.configService),
       });
     } catch (err) {
       if (err instanceof TokenExpiredError) {

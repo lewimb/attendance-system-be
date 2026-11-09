@@ -8,6 +8,7 @@ import { comparePassword } from '../common/utils/password.util.js';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshToken } from './refresh-token.entity.js';
+import { jwtClaims } from './jwt-claims.js';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +33,8 @@ export class AuthService {
       role: string;
     }>(token, {
       secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      algorithms: ['HS256'],
+      ...jwtClaims(this.config),
     });
 
     return payload;
@@ -40,19 +43,23 @@ export class AuthService {
   private async generateToken(employee: Employee) {
     const payload = {
       sub: employee.id,
-      email: employee.email,
       role: employee.role.roleName,
     };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         expiresIn: '15m',
+        jwtid: randomUUID(),
+        algorithm: 'HS256',
+        ...jwtClaims(this.config),
       }),
 
       this.jwtService.signAsync(payload, {
         secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
         expiresIn: '7d',
         jwtid: randomUUID(),
+        algorithm: 'HS256',
+        ...jwtClaims(this.config),
       }),
     ]);
 
@@ -78,7 +85,7 @@ export class AuthService {
     );
   }
 
-  async revokedRefreshTokenById(id: number) {
+  async revokedRefreshTokenById(id: number | string) {
     await this.refreshToken.update(
       { employeeId: String(id), revokedAt: IsNull() },
       { revokedAt: new Date() },
@@ -126,20 +133,26 @@ export class AuthService {
 
       await this.jwtService.verifyAsync(token, {
         secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        algorithms: ['HS256'],
+        ...jwtClaims(this.config),
       });
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     const stored = await this.refreshToken.findOne({
-      where: {
-        tokenHash: this.createHash(token),
-        revokedAt: IsNull(),
-        replacedAt: IsNull(),
-      },
+      where: { tokenHash: this.createHash(token) },
     });
 
     if (!stored) throw new UnauthorizedException('Invalid refresh token');
+
+    if (stored.replacedAt) {
+      await this.revokedRefreshTokenById(stored.employeeId);
+      throw new UnauthorizedException('Refresh token reuse detected');
+    }
+
+    if (stored.revokedAt)
+      throw new UnauthorizedException('Invalid refresh token');
 
     if (stored.expiresAt <= new Date())
       throw new UnauthorizedException('Refresh token expired');
