@@ -94,7 +94,9 @@ export function ApiError(
   });
 }
 
-export function ApiValidationError() {
+export function ApiValidationError(
+  example: string | string[] = ['email must be an email'],
+) {
   return ApiResponse({
     status: 400,
     description: 'Invalid body, query or path parameter',
@@ -107,7 +109,7 @@ export function ApiValidationError() {
             { type: 'string' },
             { type: 'array', items: { type: 'string' } },
           ],
-          example: ['email must be an email'],
+          example,
         },
         error: { type: 'string', example: 'Bad Request' },
       },

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   type FindOptionsOrder,
   type FindOptionsWhere,
+  Like,
   QueryFailedError,
   Repository,
   type UpdateResult,
@@ -23,6 +24,10 @@ import { Department } from '../department/department.entity.js';
 
 const SALT_ROUNDS = 10;
 
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
 @Injectable()
 export class EmployeeService {
   constructor(
@@ -31,6 +36,7 @@ export class EmployeeService {
   ) {}
 
   async findAll({
+    search,
     departmentId,
     isActive,
     sortBy = 'id',
@@ -39,6 +45,8 @@ export class EmployeeService {
     limit,
   }: FindAllEmployeesPayload): Promise<Paginated<Employee>> {
     const where: FindOptionsWhere<Employee> = {};
+    const term = search?.trim();
+    if (term) where.fullName = Like(`%${escapeLike(term)}%`);
     if (departmentId !== undefined) where.departmentId = departmentId;
     if (isActive !== undefined) where.isActive = isActive;
 

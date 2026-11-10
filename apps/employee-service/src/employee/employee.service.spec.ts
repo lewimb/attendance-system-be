@@ -1,7 +1,7 @@
 import { RpcException } from '@nestjs/microservices';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { QueryFailedError } from 'typeorm';
+import { Like, QueryFailedError } from 'typeorm';
 import { type CreateEmployeeDto, Employee } from '@app/common';
 import { EmployeeService } from './employee.service.js';
 
@@ -21,6 +21,7 @@ describe('EmployeeService', () => {
     create: vi.fn((data: unknown) => data),
     save: vi.fn(),
     update: vi.fn(),
+    findAndCount: vi.fn(),
   };
   let service: EmployeeService;
 
@@ -81,6 +82,45 @@ describe('EmployeeService', () => {
       statusCode: 409,
       message: 'Email already registered',
     });
+  });
+
+  it('should search the full name and keep the other filters', async () => {
+    repository.findAndCount.mockResolvedValue([[], 0]);
+
+    await service.findAll({
+      search: '  budi ',
+      departmentId: 2,
+      page: 1,
+      limit: 10,
+    });
+
+    expect(repository.findAndCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { fullName: Like('%budi%'), departmentId: 2 },
+      }),
+    );
+  });
+
+  it('should match % and _ in the search literally', async () => {
+    repository.findAndCount.mockResolvedValue([[], 0]);
+
+    await service.findAll({ search: '50%_a\\b', page: 1, limit: 10 });
+
+    expect(repository.findAndCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { fullName: Like('%50\\%\\_a\\\\b%') },
+      }),
+    );
+  });
+
+  it('should not filter by name when the search is blank', async () => {
+    repository.findAndCount.mockResolvedValue([[], 0]);
+
+    await service.findAll({ search: '   ', page: 1, limit: 10 });
+
+    expect(repository.findAndCount).toHaveBeenCalledWith(
+      expect.objectContaining({ where: {} }),
+    );
   });
 
   it('should never change the employee code on update', async () => {

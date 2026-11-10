@@ -47,7 +47,11 @@ export class EmployeeController {
     private readonly authService: AuthService,
   ) {}
 
-  @ApiOperation({ summary: 'List employees (HR admin)' })
+  @ApiOperation({
+    summary: 'List employees (HR admin)',
+    description:
+      'Search by name with `search`, and filter by `departmentId` and `isActive`. Filters combine, so `search=budi&departmentId=5` returns the employees named Budi in department 5.',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({
     name: 'limit',
@@ -55,6 +59,13 @@ export class EmployeeController {
     type: Number,
     example: 10,
     description: 'Max 100',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description:
+      'Part of the full name, case insensitive, for example `budi`. Max 100 characters.',
   })
   @ApiQuery({ name: 'departmentId', required: false, type: Number })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
@@ -65,11 +76,12 @@ export class EmployeeController {
     paginated: true,
     message: 'Employees retrieved',
   })
-  @ApiValidationError()
+  @ApiValidationError('search must be at most 100 characters')
   @Get()
   @Role('HR_ADMIN')
   @ResponseMessage('Employees retrieved')
   findAllEmployee(
+    @Query('search') search: unknown,
     @Query('departmentId', new ParseIntPipe({ optional: true }))
     departmentId: number | undefined,
     @Query('isActive', new ParseBoolPipe({ optional: true }))
@@ -79,6 +91,14 @@ export class EmployeeController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
+    if (search !== undefined && typeof search !== 'string') {
+      throw new BadRequestException('search must be a single string');
+    }
+    const term = search?.trim() || undefined;
+    if (term !== undefined && term.length > 100) {
+      throw new BadRequestException('search must be at most 100 characters');
+    }
+
     if (sortBy !== undefined && !this.isSortField(sortBy)) {
       throw new BadRequestException(
         `sortBy must be one of: ${EMPLOYEE_SORT_FIELDS.join(', ')}`,
@@ -95,6 +115,7 @@ export class EmployeeController {
     }
 
     const payload: FindAllEmployeesPayload = {
+      search: term,
       departmentId,
       isActive,
       sortBy,

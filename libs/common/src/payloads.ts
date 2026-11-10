@@ -9,6 +9,7 @@ export type EmployeeSortField = (typeof EMPLOYEE_SORT_FIELDS)[number];
 export type SortOrder = 'ASC' | 'DESC';
 
 export type FindAllEmployeesPayload = {
+  search?: string;
   departmentId?: number;
   isActive?: boolean;
   sortBy?: EmployeeSortField;
